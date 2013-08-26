@@ -32,6 +32,8 @@ public class Path extends Resource {
 
   private PointF currentPoint;
   private PointF startPoint;
+  private PointF min;
+  private PointF max;
   private byte[] types;
   private float[] points;
 
@@ -61,6 +63,8 @@ public class Path extends Resource {
     super( device );
     currentPoint = new PointF();
     startPoint = new PointF();
+    min = new PointF();
+    max = new PointF();
     types = new byte[ 0 ];
     points = new float[ 0 ];
     moveTo( 0, 0 );
@@ -96,6 +100,19 @@ public class Path extends Resource {
       SWT.error( SWT.ERROR_NULL_ARGUMENT );
     }
     appendData( data );
+  }
+
+  private void expandBound( float x, float y ) {
+    if (min.x > x) {
+      min.x = x;
+    } else if (max.x < x) {
+      max.x = x;
+    }
+    if (min.y > y) {
+      min.y = y;
+    } else if (max.y < y) {
+      max.y = y;
+    }
   }
 
   /**
@@ -173,6 +190,7 @@ public class Path extends Resource {
     currentPoint.y = y;
     startPoint.x = x;
     startPoint.y = y;
+    expandBound( x, y );
   }
 
   /**
@@ -193,6 +211,7 @@ public class Path extends Resource {
     addPoint( SWT.PATH_LINE_TO, x, y );
     currentPoint.x = x;
     currentPoint.y = y;
+    expandBound( x, y );
   }
 
   /**
@@ -214,6 +233,7 @@ public class Path extends Resource {
     addPoint( SWT.PATH_QUAD_TO, cx, cy, x, y );
     currentPoint.x = x;
     currentPoint.y = y;
+    expandBound( x, y );
   }
 
   /**
@@ -237,6 +257,9 @@ public class Path extends Resource {
     addPoint( SWT.PATH_CUBIC_TO, cx1, cy1, cx2, cy2, x, y );
     currentPoint.x = x;
     currentPoint.y = y;
+    expandBound( cx1, cy1 );
+    expandBound( cx2, cy2 );
+    expandBound( x, y );
   }
 
   /**
@@ -386,4 +409,33 @@ public class Path extends Resource {
 
   }
 
+  public void getBounds( float[] pathBounds ) {
+    pathBounds[0] = min.x;
+    pathBounds[1] = min.y;
+    pathBounds[2] = max.x;
+    pathBounds[3] = max.y;
+  }
+
+  @Override
+  public void dispose() {
+    if (device != null) {
+      super.dispose();
+    }
+  }
+
+  public void addArc( float x, float y, float width, float height, float starta, float angle ) {
+    // just draw the line
+    float startx = (float)( x + Math.cos( starta * Math.PI / 180 ) * width);
+    float starty = (float)(y - Math.sin( starta * Math.PI / 180) * height);
+    float endx = (float)(x + Math.cos( (starta + angle) * Math.PI / 180) * width);
+    float endy = (float)(y - Math.sin( (starta + angle) * Math.PI / 180) * height);
+    if (getLastPointType() == SWT.NONE) {
+      moveTo( startx, starty );
+    } else {
+      lineTo( startx, starty );
+    }
+    lineTo( endx, endy );
+    currentPoint.x = endx;
+    currentPoint.y = endy;
+  }
 }
